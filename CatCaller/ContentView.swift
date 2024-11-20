@@ -29,18 +29,30 @@ extension Color {
 }
 
 struct ContentView: View {
-    @State private var soundIDs: [SystemSoundID] = []
-    @State private var pressedIndex: Int? = nil  // 追踪被按下的按钮
+    @State private var audioPlayers: [AVAudioPlayer?] = Array(repeating: nil, count: 9)
+    @State private var pressedIndex: Int? = nil
     
-    // 改回三列布局
     let columns = [
         GridItem(.flexible()),
         GridItem(.flexible()),
         GridItem(.flexible())
     ]
     
-    // 触觉反馈生成器
     let feedback = UIImpactFeedbackGenerator(style: .medium)
+    
+    init() {
+        setupAudioSession()
+    }
+    
+    private func setupAudioSession() {
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try audioSession.setActive(true)
+        } catch {
+            print("Failed to set audio session: \(error)")
+        }
+    }
     
     var body: some View {
         ZStack {
@@ -88,8 +100,8 @@ struct ContentView: View {
             feedback.prepare() // 预备触觉反馈
         }
         .onDisappear {
-            for soundID in soundIDs {
-                AudioServicesDisposeSystemSoundID(soundID)
+            audioPlayers.forEach { player in
+                player?.stop()
             }
         }
     }
@@ -112,13 +124,13 @@ struct ContentView: View {
         // 预加载所有声音
         for i in 1...9 {
             if let soundURL = Bundle.main.url(forResource: "meow\(i)", withExtension: "wav") {
-                var soundID: SystemSoundID = 0
-                let status = AudioServicesCreateSystemSoundID(soundURL as CFURL, &soundID)
-                if status == kAudioServicesNoError {
-                    soundIDs.append(soundID)
+                do {
+                    let player = try AVAudioPlayer(contentsOf: soundURL)
+                    player.prepareToPlay()
+                    audioPlayers[i-1] = player
                     print("成功加载声音：meow\(i).wav")
-                } else {
-                    print("加载声音失败：meow\(i).wav，错误码：\(status)")
+                } catch {
+                    print("加载声音失败：meow\(i).wav，错误：\(error)")
                 }
             } else {
                 print("找不到声音文件：meow\(i).wav")
@@ -127,10 +139,24 @@ struct ContentView: View {
     }
     
     private func playSound(index: Int) {
-        guard index < soundIDs.count else { return }
-        let soundID = soundIDs[index]
-        AudioServicesPlaySystemSound(soundID)
-        print("播放声音：\(index + 1)")
+        guard index < audioPlayers.count else { return }
+        
+        // 停止其他正在播放的声音
+        audioPlayers.forEach { player in
+            if player?.isPlaying == true {
+                player?.stop()
+                player?.currentTime = 0
+            }
+        }
+        
+        // 播放选中的声音
+        if let player = audioPlayers[index] {
+            if !player.isPlaying {
+                player.currentTime = 0
+                player.play()
+                print("播放声音：\(index + 1)")
+            }
+        }
     }
 }
 
