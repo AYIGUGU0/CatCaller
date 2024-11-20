@@ -111,17 +111,17 @@ struct ContentView: View {
     private func loadSounds() {
         // 预加载所有声音
         for i in 1...9 {
-            if let soundURL = Bundle.main.url(forResource: "meow\(i)", withExtension: "mp3") {
+            if let soundURL = Bundle.main.url(forResource: "meow\(i)", withExtension: "wav") {
                 var soundID: SystemSoundID = 0
                 let status = AudioServicesCreateSystemSoundID(soundURL as CFURL, &soundID)
                 if status == kAudioServicesNoError {
                     soundIDs.append(soundID)
-                    print("成功加载声音：meow\(i).mp3")
+                    print("成功加载声音：meow\(i).wav")
                 } else {
-                    print("加载声音失败：meow\(i).mp3，错误码：\(status)")
+                    print("加载声音失败：meow\(i).wav，错误码：\(status)")
                 }
             } else {
-                print("找不到声音文件：meow\(i).mp3")
+                print("找不到声音文件：meow\(i).wav")
             }
         }
     }
